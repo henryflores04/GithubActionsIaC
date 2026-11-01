@@ -8,7 +8,7 @@
 # En GitHub Actions estas opciones se pasan por linea de comandos con
 # -backend-config, por lo que este archivo NO se versiona ni se necesita alli.
 
-bucket       = "lab09-tfstate-REEMPLAZA-CON-TU-BUCKET"
+bucket       = "lab09-tfstate-384648803897-v2"
 key          = "lab09/dev/terraform.tfstate"
 region       = "us-east-2"
 encrypt      = true

@@ -9,7 +9,9 @@ environment  = "dev"
 
 # Nombre GLOBALMENTE UNICO del bucket de estado. Debe incluir algo que lo
 # distinga, como el ID de cuenta o un sufijo aleatorio.
-state_bucket_name = "lab09-tfstate-384648803897"
+# Nota: S3 tarda en liberar un nombre recien borrado, sobre todo para
+# recrearlo en otra region. Si necesitas recrear el bucket, cambia el nombre.
+state_bucket_name = "lab09-tfstate-384648803897-v2"
 state_key_prefix  = "lab09/dev"
 
 # ── Datos del repositorio de GitHub ────────────────────────────────────
