@@ -1,0 +1,89 @@
+name: Deploy (dev)
+
+# Solo se ejecuta con push a la rama de despliegue o manualmente.
+# Los workflows de validacion de pull request NO asumen el rol de despliegue:
+# estan en validate.yml y no piden credenciales de AWS.
+on:
+  push:
+    branches: [development]
+  workflow_dispatch:
+
+# Permisos minimos: contents:read para el checkout e id-token:write para OIDC.
+permissions:
+  contents: read
+  id-token: write
+
+# Evita dos despliegues simultaneos sobre el mismo estado.
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Terraform apply (dev)
+    runs-on: ubuntu-latest
+
+    # El entorno dev es el que aparece en el subject del rol OIDC
+    # (environment:dev) y el que tiene la regla de despliegue sobre development.
+    environment: dev
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "0"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales de AWS mediante OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gha-terraform-dev
+          # Falla si no puede asumir el rol, en lugar de continuar sin credenciales.
+          mask-aws-account-id: true
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.10"
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: terraform init (backend S3)
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=lab09/dev/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      - name: terraform validate
+        run: terraform validate
+
+      - name: terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Publicar la salida
+        run: |
+          {
+            echo "### Terraform apply completado (dev)"
+            echo ""
+            echo "| Salida | Valor |"
+            echo "|---|---|"
+            echo "| API base | $(terraform output -raw api_base_url) |"
+            echo "| Ruta protegida | $(terraform output -raw api_hello_url) |"
+            echo "| Ruta publica | $(terraform output -raw api_health_url) |"
+            echo "| User Pool | $(terraform output -raw cognito_user_pool_id) |"
+            echo "| Client ID | $(terraform output -raw cognito_client_id) |"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,48 @@
+name: Validate
+
+# Validacion de pull requests.
+# IMPORTANTE: este workflow NO solicita id-token ni configura credenciales de
+# AWS, por lo que no puede asumir el rol de despliegue. Solo comprueba formato
+# y validez de la configuracion.
+on:
+  pull_request:
+    branches: [development, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Terraform fmt y validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.10"
+
+      - name: terraform fmt (stack)
+        working-directory: terraform
+        run: terraform fmt -check -diff -recursive
+
+      - name: terraform validate (stack)
+        working-directory: terraform
+        run: |
+          # Sin backend: no se toca el estado remoto ni se necesitan credenciales.
+          terraform init -backend=false -input=false
+          terraform validate
+
+      - name: terraform fmt (bootstrap)
+        working-directory: bootstrap
+        run: terraform fmt -check -diff -recursive
+
+      - name: terraform validate (bootstrap)
+        working-directory: bootstrap
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate

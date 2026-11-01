@@ -1,0 +1,24 @@
+# Copiar a terraform.tfvars y completar con los valores reales.
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# terraform.tfvars esta excluido por .gitignore: no se versiona.
+
+aws_region   = "us-east-2"
+project_prefix = "lab09"
+environment  = "dev"
+
+# Nombre GLOBALMENTE UNICO del bucket de estado. Debe incluir algo que lo
+# distinga, como el ID de cuenta o un sufijo aleatorio.
+state_bucket_name = "lab09-tfstate-384648803897"
+state_key_prefix  = "lab09/dev"
+
+# ── Datos del repositorio de GitHub ────────────────────────────────────
+github_owner = "henryflores04"
+github_repo  = "GithubActionsIaC"
+
+# Formato de subject con IDs inmutables (repositorios creados desde
+# julio de 2026). Obtener los IDs con:
+#   pwsh ./scripts/get-oidc-ids.ps1 -Owner henryflores04 -Repo GithubActionsIaC
+use_immutable_subject = true
+github_owner_id       = "REEMPLAZA"
+github_repo_id        = "REEMPLAZA"

@@ -1,0 +1,18 @@
+# Configuracion del backend remoto de estado.
+#
+# Uso local:
+#   cp backend.hcl.example backend.hcl
+#   # reemplazar el bucket y la region con los valores reales
+#   terraform -chdir=terraform init -backend-config=backend.hcl
+#
+# En GitHub Actions estas opciones se pasan por linea de comandos con
+# -backend-config, por lo que este archivo NO se versiona ni se necesita alli.
+
+bucket       = "lab09-tfstate-REEMPLAZA-CON-TU-BUCKET"
+key          = "lab09/dev/terraform.tfstate"
+region       = "us-east-2"
+encrypt      = true
+
+# Bloqueo nativo de S3 (Terraform >= 1.10): evita tener que crear una tabla
+# DynamoDB solo para el lockfile. Genera el objeto terraform.tfstate.tflock.
+use_lockfile = true

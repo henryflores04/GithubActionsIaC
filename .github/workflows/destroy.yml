@@ -1,0 +1,81 @@
+name: Destroy (dev)
+
+# Destruccion manual y deliberada. Requiere escribir DESTROY para confirmar,
+# de modo que no se pueda ejecutar por accidente.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribe DESTROY (en mayusculas) para confirmar la destruccion'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
+jobs:
+  destroy:
+    name: Terraform destroy (dev)
+    runs-on: ubuntu-latest
+
+    # Si la confirmacion no es exactamente DESTROY, el job no corre.
+    if: ${{ inputs.confirm == 'DESTROY' }}
+
+    environment: dev
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "0"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales de AWS mediante OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gha-terraform-destroy-dev
+          mask-aws-account-id: true
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.10"
+
+      - name: terraform init (backend S3)
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=lab09/dev/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      - name: terraform destroy
+        run: terraform destroy -input=false -auto-approve
+
+      - name: Verificar que no quedan recursos del laboratorio
+        run: |
+          echo "### Verificacion posterior al destroy" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "-- API Gateway --" >> "$GITHUB_STEP_SUMMARY"
+          aws apigatewayv2 get-apis --region "${{ vars.AWS_REGION }}" \
+            --query "Items[?contains(Name, 'lab09-dev')].Name" --output text >> "$GITHUB_STEP_SUMMARY" || true
+          echo "-- Lambda --" >> "$GITHUB_STEP_SUMMARY"
+          aws lambda list-functions --region "${{ vars.AWS_REGION }}" \
+            --query "Functions[?contains(FunctionName, 'lab09-dev')].FunctionName" --output text >> "$GITHUB_STEP_SUMMARY" || true
+          echo "-- Cognito --" >> "$GITHUB_STEP_SUMMARY"
+          aws cognito-idp list-user-pools --max-results 60 --region "${{ vars.AWS_REGION }}" \
+            --query "UserPools[?contains(Name, 'lab09-dev')].Name" --output text >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,39 @@
+# ── Terraform ──────────────────────────────────────────────────────────
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tflock
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Configuracion local del backend y valores de variables: NO se versionan
+terraform/backend.hcl
+bootstrap/terraform.tfvars
+*.auto.tfvars
+
+# Planes guardados
+*.tfplan
+tfplan
+
+# ── Artefactos de empaquetado ──────────────────────────────────────────
+terraform/build/
+
+# Directorio temporal usado por terraform en entornos con TMP redirigido
+.tmp/
+
+# ── Sistema operativo y editores ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ── Entornos virtuales de Python (por si se usan scripts locales) ──────
+.venv/
+__pycache__/
+*.pyc
