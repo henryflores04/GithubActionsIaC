@@ -1,17 +1,24 @@
 # ── Base de la API ─────────────────────────────────────────────────────
+# invoke_url del stage $default termina en "/", asi que se recorta antes de
+# concatenar rutas. Sin trimsuffix las URL salen con doble barra ("//hello"),
+# que no coincide con la ruta registrada en API Gateway.
+locals {
+  api_base = trimsuffix(aws_apigatewayv2_stage.default.invoke_url, "/")
+}
+
 output "api_base_url" {
   description = "URL base de la API (el stage $default no aparece en la ruta)"
-  value       = aws_apigatewayv2_stage.default.invoke_url
+  value       = local.api_base
 }
 
 output "api_hello_url" {
   description = "Ruta protegida. Requiere un access token de Cognito en el header Authorization"
-  value       = "${aws_apigatewayv2_stage.default.invoke_url}/hello"
+  value       = "${local.api_base}/hello"
 }
 
 output "api_health_url" {
   description = "Ruta publica, util para comprobar que la API responde"
-  value       = "${aws_apigatewayv2_stage.default.invoke_url}/health"
+  value       = "${local.api_base}/health"
 }
 
 # ── Cognito ────────────────────────────────────────────────────────────

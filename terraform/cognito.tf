@@ -52,6 +52,10 @@ resource "aws_cognito_user_pool_client" "this" {
   explicit_auth_flows = [
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
+    # Permite admin-initiate-auth, que exige credenciales de IAM y sirve para
+    # obtener un token de prueba desde la CLI sin implementar SRP a mano.
+    # En produccion se retiraria: las aplicaciones reales usan SRP.
+    "ALLOW_ADMIN_USER_PASSWORD_AUTH",
   ]
 
   prevent_user_existence_errors = "ENABLED"
