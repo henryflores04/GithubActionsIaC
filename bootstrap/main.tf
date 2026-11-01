@@ -218,6 +218,11 @@ data "aws_iam_policy_document" "deploy" {
       "apigateway:PUT",
       "apigateway:PATCH",
       "apigateway:DELETE",
+      # El etiquetado de API Gateway usa acciones propias: no basta con POST.
+      # CreateApi acepta tags en la propia llamada, pero CreateStage las aplica
+      # por separado y exige apigateway:TagResource sobre el ARN del stage.
+      "apigateway:TagResource",
+      "apigateway:UntagResource",
     ]
 
     resources = [
