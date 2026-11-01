@@ -27,7 +27,6 @@ variable "state_key_prefix" {
   default     = "lab09/dev"
 }
 
-# ── Datos de GitHub ────────────────────────────────────────────────────
 variable "github_owner" {
   description = "Propietario del repositorio en GitHub"
   type        = string

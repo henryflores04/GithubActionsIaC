@@ -3,11 +3,6 @@ data "aws_caller_identity" "current" {}
 locals {
   account_id = data.aws_caller_identity.current.account_id
 
-  # Subject OIDC al que se limita el rol.
-  #   - Formato con IDs inmutables (recomendado para repositorios nuevos):
-  #     repo:OWNER@OWNER_ID/REPO@REPO_ID:environment:dev
-  #   - Formato heredado:
-  #     repo:OWNER/REPO:environment:dev
   oidc_subject = var.use_immutable_subject ? (
     "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repo}@${var.github_repo_id}:environment:${var.environment}"
   ) : "repo:${var.github_owner}/${var.github_repo}:environment:${var.environment}"
@@ -30,7 +25,6 @@ locals {
   }
 }
 
-# ── Bucket S3 para el estado remoto de Terraform ───────────────────────
 resource "aws_s3_bucket" "state" {
   bucket = var.state_bucket_name
 
@@ -94,14 +88,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "state" {
   }
 }
 
-# ── Proveedor OIDC de GitHub ───────────────────────────────────────────
-# El atributo thumbprint_list se omite a proposito: AWS gestiona los
-# thumbprints del proveedor desde 2024. Si tu version del provider los exige,
-# agrega:
-#   thumbprint_list = [
-#     "6938fd4d98bab03faadb97b34396831e3780aea1",
-#     "1c58a3a8518e8759bf075b76b750d4f2df264fcd",
-#   ]
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
   client_id_list = ["sts.amazonaws.com"]
@@ -111,7 +97,6 @@ resource "aws_iam_openid_connect_provider" "github" {
   })
 }
 
-# ── Politica de confianza del rol de despliegue ────────────────────────
 data "aws_iam_policy_document" "trust" {
   statement {
     sid    = "AllowGitHubActionsOIDC"
@@ -130,7 +115,6 @@ data "aws_iam_policy_document" "trust" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Sin comodines: solo el repositorio y el entorno exactos.
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
@@ -139,11 +123,7 @@ data "aws_iam_policy_document" "trust" {
   }
 }
 
-# ── Politica de permisos del rol ───────────────────────────────────────
-# Politica administrada por el cliente (no AdministratorAccess), limitada a
-# los servicios del stack y al backend de estado.
 data "aws_iam_policy_document" "deploy" {
-  # --- Backend de estado: lectura del bucket, limitada al prefijo ---
   statement {
     sid    = "TerraformStateBucketList"
     effect = "Allow"
@@ -166,7 +146,6 @@ data "aws_iam_policy_document" "deploy" {
     }
   }
 
-  # --- Backend de estado: solo el tfstate y su lockfile ---
   statement {
     sid    = "TerraformStateObjects"
     effect = "Allow"
@@ -180,7 +159,6 @@ data "aws_iam_policy_document" "deploy" {
     resources = local.state_object_arns
   }
 
-  # --- Cognito User Pools ---
   statement {
     sid    = "CognitoUserPools"
     effect = "Allow"
@@ -203,11 +181,9 @@ data "aws_iam_policy_document" "deploy" {
       "cognito-idp:ListTagsForResource",
     ]
 
-    # CreateUserPool no admite restriccion por ARN porque el ID aun no existe.
     resources = ["*"]
   }
 
-  # --- API Gateway (HTTP API v2) ---
   statement {
     sid    = "ApiGatewayV2"
     effect = "Allow"
@@ -218,9 +194,6 @@ data "aws_iam_policy_document" "deploy" {
       "apigateway:PUT",
       "apigateway:PATCH",
       "apigateway:DELETE",
-      # El etiquetado de API Gateway usa acciones propias: no basta con POST.
-      # CreateApi acepta tags en la propia llamada, pero CreateStage las aplica
-      # por separado y exige apigateway:TagResource sobre el ARN del stage.
       "apigateway:TagResource",
       "apigateway:UntagResource",
     ]
@@ -233,7 +206,6 @@ data "aws_iam_policy_document" "deploy" {
     ]
   }
 
-  # --- Lambda ---
   statement {
     sid    = "LambdaFunctions"
     effect = "Allow"
@@ -259,7 +231,6 @@ data "aws_iam_policy_document" "deploy" {
     resources = [local.lambda_arn_prefix]
   }
 
-  # --- CloudWatch Logs de los recursos del laboratorio ---
   statement {
     sid    = "LogsLogGroups"
     effect = "Allow"
@@ -285,7 +256,6 @@ data "aws_iam_policy_document" "deploy" {
     ]
   }
 
-  # DescribeLogGroups y las politicas de recurso no admiten restriccion por ARN.
   statement {
     sid    = "LogsAccountLevel"
     effect = "Allow"
@@ -300,12 +270,6 @@ data "aws_iam_policy_document" "deploy" {
     resources = ["*"]
   }
 
-  # --- API de entrega de registros (vended logs) ---
-  # Los access logs de API Gateway v2 no se escriben con PutLogEvents: se
-  # configuran a traves de la Log Delivery API, que exige acciones propias.
-  # Sin logs:CreateLogDelivery, CreateStage falla con
-  # "Insufficient permissions to enable logging".
-  # Estas acciones no admiten restriccion por ARN.
   statement {
     sid    = "CloudWatchLogDelivery"
     effect = "Allow"
@@ -321,7 +285,6 @@ data "aws_iam_policy_document" "deploy" {
     resources = ["*"]
   }
 
-  # --- Roles IAM de ejecucion de Lambda ---
   statement {
     sid    = "LambdaExecutionRoles"
     effect = "Allow"
@@ -347,7 +310,6 @@ data "aws_iam_policy_document" "deploy" {
     resources = [local.lambda_role_arn]
   }
 
-  # Solo se puede pasar el rol de ejecucion de Lambda, y solo a Lambda.
   statement {
     sid    = "PassLambdaExecutionRole"
     effect = "Allow"
@@ -362,7 +324,6 @@ data "aws_iam_policy_document" "deploy" {
     }
   }
 
-  # Terraform consulta la identidad para componer ARNs.
   statement {
     sid       = "CallerIdentity"
     effect    = "Allow"
@@ -381,7 +342,6 @@ resource "aws_iam_policy" "deploy" {
   })
 }
 
-# ── Rol de despliegue ──────────────────────────────────────────────────
 resource "aws_iam_role" "deploy" {
   name                 = "${var.project_prefix}-github-actions-${var.environment}"
   description          = "Rol asumido por GitHub Actions mediante OIDC para desplegar en ${var.environment}"

@@ -1,10 +1,5 @@
-// Handler de la funcion hello.
-// No usa dependencias externas a proposito: el paquete se comprime tal cual y
-// no hace falta empaquetar node_modules ni construir en Docker.
 
 export const handler = async (event) => {
-  // API Gateway HTTP API (payload 2.0) entrega los claims del JWT ya
-  // validados en event.requestContext.authorizer.jwt.claims.
   const jwt = event.requestContext?.authorizer?.jwt;
 
   const claims = jwt?.claims ?? null;
@@ -16,7 +11,6 @@ export const handler = async (event) => {
     requestId: event.requestContext?.requestId ?? null,
     routeKey: event.routeKey ?? null,
     authenticated: Boolean(claims),
-    // Solo se exponen los claims necesarios para la demostracion.
     subject: claims?.sub ?? null,
     email: claims?.email ?? null,
     tokenUse: claims?.token_use ?? null,

@@ -1,9 +1,5 @@
 name: Validate
 
-# Validacion de pull requests.
-# IMPORTANTE: este workflow NO solicita id-token ni configura credenciales de
-# AWS, por lo que no puede asumir el rol de despliegue. Solo comprueba formato
-# y validez de la configuracion.
 on:
   pull_request:
     branches: [development, main]
@@ -33,7 +29,6 @@ jobs:
       - name: terraform validate (stack)
         working-directory: terraform
         run: |
-          # Sin backend: no se toca el estado remoto ni se necesitan credenciales.
           terraform init -backend=false -input=false
           terraform validate
 

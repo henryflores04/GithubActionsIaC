@@ -8,8 +8,4 @@ terraform {
     }
   }
 
-  # Sin bloque backend: el bootstrap usa estado LOCAL.
-  # Se ejecuta una sola vez con un usuario administrador para crear el bucket
-  # de estado, el proveedor OIDC y el rol de despliegue. A partir de ahi,
-  # Terraform ya puede usar el backend S3 remoto.
 }

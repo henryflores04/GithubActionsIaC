@@ -1,7 +1,5 @@
 name: Destroy (dev)
 
-# Destruccion manual y deliberada. Requiere escribir DESTROY para confirmar,
-# de modo que no se pueda ejecutar por accidente.
 on:
   workflow_dispatch:
     inputs:
@@ -23,7 +21,6 @@ jobs:
     name: Terraform destroy (dev)
     runs-on: ubuntu-latest
 
-    # Si la confirmacion no es exactamente DESTROY, el job no corre.
     if: ${{ inputs.confirm == 'DESTROY' }}
 
     environment: dev

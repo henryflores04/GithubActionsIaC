@@ -1,15 +1,9 @@
-# ── Codigo de la funcion ───────────────────────────────────────────────
-# Terraform comprime la carpeta src/ en cada plan, asi que el despliegue
-# siempre usa el codigo actual.
 data "archive_file" "lambda" {
   type        = "zip"
   source_dir  = "${path.module}/src"
   output_path = "${path.module}/build/lambda.zip"
 }
 
-# ── Log group ──────────────────────────────────────────────────────────
-# Se crea explicitamente para fijar la retencion. Si se dejara que Lambda lo
-# creara solo, la retencion seria infinita y los registros se acumularian.
 resource "aws_cloudwatch_log_group" "lambda" {
   name              = "/aws/lambda/${local.name_prefix}-hello"
   retention_in_days = var.log_retention_days
@@ -19,7 +13,6 @@ resource "aws_cloudwatch_log_group" "lambda" {
   }
 }
 
-# ── Rol de ejecucion ───────────────────────────────────────────────────
 data "aws_iam_policy_document" "lambda_assume_role" {
   statement {
     effect = "Allow"
@@ -43,13 +36,11 @@ resource "aws_iam_role" "lambda" {
   }
 }
 
-# Permiso minimo para escribir en CloudWatch Logs.
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# ── Funcion ────────────────────────────────────────────────────────────
 resource "aws_lambda_function" "hello" {
   function_name = "${local.name_prefix}-hello"
   description   = "Funcion de ejemplo protegida por Cognito y API Gateway"
@@ -76,14 +67,9 @@ resource "aws_lambda_function" "hello" {
     Name = "${local.name_prefix}-hello"
   }
 
-  # Sin este depends_on, Terraform podria crear la funcion antes que su log
-  # group y Lambda lo crearia sin retencion, haciendo fallar al de Terraform.
   depends_on = [aws_cloudwatch_log_group.lambda]
 }
 
-# ── Permiso de invocacion desde API Gateway ────────────────────────────
-# Sin esta politica de recurso, API Gateway devuelve 500 sin escribir nada en
-# el log de la Lambda, porque la funcion nunca llega a ejecutarse.
 resource "aws_lambda_permission" "apigw" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"

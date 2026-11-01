@@ -1,5 +1,3 @@
-# ── Log group de API Gateway ───────────────────────────────────────────
-# Destino de los access logs configurados en el stage de apigateway.tf.
 resource "aws_cloudwatch_log_group" "apigw" {
   name              = "/aws/apigateway/${local.name_prefix}-api"
   retention_in_days = var.log_retention_days
@@ -9,9 +7,6 @@ resource "aws_cloudwatch_log_group" "apigw" {
   }
 }
 
-# ── Politica de recurso para los logs ──────────────────────────────────
-# API Gateway necesita permiso explicito para escribir en el log group. Sin
-# esta politica el despliegue del stage falla o los access logs quedan vacios.
 resource "aws_cloudwatch_log_resource_policy" "apigw" {
   policy_name = "${local.name_prefix}-apigw-logs"
 
@@ -34,7 +29,3 @@ resource "aws_cloudwatch_log_resource_policy" "apigw" {
     ]
   })
 }
-
-# ── Log group de la Lambda ─────────────────────────────────────────────
-# Se declara en lambda.tf porque alli se usa el depends_on de la funcion.
-# Se deja constancia aqui en un comentario para no duplicar el recurso.

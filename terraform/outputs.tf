@@ -1,7 +1,3 @@
-# ── Base de la API ─────────────────────────────────────────────────────
-# invoke_url del stage $default termina en "/", asi que se recorta antes de
-# concatenar rutas. Sin trimsuffix las URL salen con doble barra ("//hello"),
-# que no coincide con la ruta registrada en API Gateway.
 locals {
   api_base = trimsuffix(aws_apigatewayv2_stage.default.invoke_url, "/")
 }
@@ -21,7 +17,6 @@ output "api_health_url" {
   value       = "${local.api_base}/health"
 }
 
-# ── Cognito ────────────────────────────────────────────────────────────
 output "cognito_user_pool_id" {
   description = "ID del User Pool"
   value       = aws_cognito_user_pool.this.id
@@ -37,7 +32,6 @@ output "cognito_issuer" {
   value       = "https://${aws_cognito_user_pool.this.endpoint}"
 }
 
-# ── Recursos de apoyo ──────────────────────────────────────────────────
 output "lambda_function_name" {
   description = "Nombre de la funcion Lambda"
   value       = aws_lambda_function.hello.function_name

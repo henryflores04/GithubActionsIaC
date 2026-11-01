@@ -1,19 +1,14 @@
 name: Deploy (dev)
 
-# Solo se ejecuta con push a la rama de despliegue o manualmente.
-# Los workflows de validacion de pull request NO asumen el rol de despliegue:
-# estan en validate.yml y no piden credenciales de AWS.
 on:
   push:
     branches: [development]
   workflow_dispatch:
 
-# Permisos minimos: contents:read para el checkout e id-token:write para OIDC.
 permissions:
   contents: read
   id-token: write
 
-# Evita dos despliegues simultaneos sobre el mismo estado.
 concurrency:
   group: terraform-dev
   cancel-in-progress: false
@@ -23,8 +18,6 @@ jobs:
     name: Terraform apply (dev)
     runs-on: ubuntu-latest
 
-    # El entorno dev es el que aparece en el subject del rol OIDC
-    # (environment:dev) y el que tiene la regla de despliegue sobre development.
     environment: dev
 
     defaults:
@@ -45,7 +38,6 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-session-name: gha-terraform-dev
-          # Falla si no puede asumir el rol, en lugar de continuar sin credenciales.
           mask-aws-account-id: true
 
       - name: Instalar Terraform

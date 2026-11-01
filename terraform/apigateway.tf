@@ -1,6 +1,3 @@
-# ── HTTP API ───────────────────────────────────────────────────────────
-# Se usa HTTP API (v2) en lugar de REST API porque valida JWT de forma nativa
-# con un autorizador JWT, es mas barato y tiene menor latencia.
 resource "aws_apigatewayv2_api" "this" {
   name          = "${local.name_prefix}-api"
   description   = "API del laboratorio protegida con Cognito"
@@ -18,9 +15,6 @@ resource "aws_apigatewayv2_api" "this" {
   }
 }
 
-# ── Autorizador JWT ────────────────────────────────────────────────────
-# Valida la firma del token contra el issuer de Cognito y comprueba que el
-# audience coincida con el client id del User Pool.
 resource "aws_apigatewayv2_authorizer" "cognito" {
   api_id           = aws_apigatewayv2_api.this.id
   name             = "cognito-jwt"
@@ -33,7 +27,6 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
   }
 }
 
-# ── Integracion con Lambda ─────────────────────────────────────────────
 resource "aws_apigatewayv2_integration" "lambda" {
   api_id           = aws_apigatewayv2_api.this.id
   integration_type = "AWS_PROXY"
@@ -44,9 +37,6 @@ resource "aws_apigatewayv2_integration" "lambda" {
   timeout_milliseconds   = 10000
 }
 
-# ── Ruta protegida ─────────────────────────────────────────────────────
-# Exige un token valido de Cognito; sin el, API Gateway responde 401 y la
-# funcion nunca se invoca.
 resource "aws_apigatewayv2_route" "hello" {
   api_id             = aws_apigatewayv2_api.this.id
   route_key          = "GET /hello"
@@ -55,9 +45,6 @@ resource "aws_apigatewayv2_route" "hello" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
-# ── Ruta publica ───────────────────────────────────────────────────────
-# Sirve para comprobar que la API responde sin token y contrastar con 401 de
-# la ruta protegida.
 resource "aws_apigatewayv2_route" "health" {
   api_id             = aws_apigatewayv2_api.this.id
   route_key          = "GET /health"
@@ -65,9 +52,6 @@ resource "aws_apigatewayv2_route" "health" {
   authorization_type = "NONE"
 }
 
-# ── Stage por defecto ──────────────────────────────────────────────────
-# El stage "$default" no aparece en la URL: la base queda como
-# https://<api-id>.execute-api.<region>.amazonaws.com
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.this.id
   name        = "$default"
