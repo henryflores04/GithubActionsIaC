@@ -300,6 +300,27 @@ data "aws_iam_policy_document" "deploy" {
     resources = ["*"]
   }
 
+  # --- API de entrega de registros (vended logs) ---
+  # Los access logs de API Gateway v2 no se escriben con PutLogEvents: se
+  # configuran a traves de la Log Delivery API, que exige acciones propias.
+  # Sin logs:CreateLogDelivery, CreateStage falla con
+  # "Insufficient permissions to enable logging".
+  # Estas acciones no admiten restriccion por ARN.
+  statement {
+    sid    = "CloudWatchLogDelivery"
+    effect = "Allow"
+
+    actions = [
+      "logs:CreateLogDelivery",
+      "logs:GetLogDelivery",
+      "logs:UpdateLogDelivery",
+      "logs:DeleteLogDelivery",
+      "logs:ListLogDeliveries",
+    ]
+
+    resources = ["*"]
+  }
+
   # --- Roles IAM de ejecucion de Lambda ---
   statement {
     sid    = "LambdaExecutionRoles"
